@@ -267,6 +267,37 @@ body{font-family:'Inter',-apple-system,"Microsoft YaHei","PingFang SC",sans-seri
 .settings-row .btn{padding:6px 14px;font-size:13px}
 
 /* 响应式 */
+/* AI 助手 */
+.ai-fab{position:fixed;bottom:80px;right:16px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#8b5cf6);color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(99,102,241,.4);z-index:150;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.ai-fab:active{transform:scale(.92)}
+.ai-fab.open{transform:rotate(45deg)}
+.ai-panel{position:fixed;bottom:0;left:0;right:0;top:0;background:var(--bg);z-index:200;display:none;flex-direction:column}
+.ai-panel.show{display:flex}
+.ai-header{padding:14px 16px;background:linear-gradient(135deg,var(--primary),#8b5cf6);color:#fff;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.ai-header h3{flex:1;font-size:16px;font-weight:700}
+.ai-close{background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:4px}
+.ai-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.ai-msg{max-width:85%;padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.6;word-break:break-word}
+.ai-msg.user{background:var(--primary);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.ai-msg.bot{background:var(--surface);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px;border:1px solid var(--border)}
+.ai-msg.bot.error{background:#fef2f2;color:var(--danger);border-color:#fecaca}
+.ai-msg.bot .action-tag{display:inline-block;background:#ecfdf5;color:var(--success);font-size:12px;padding:2px 8px;border-radius:6px;margin-bottom:6px;font-weight:600}
+.ai-typing{align-self:flex-start;padding:12px 16px;background:var(--surface);border-radius:16px;border-bottom-left-radius:4px;border:1px solid var(--border);font-size:14px;color:var(--text-muted)}
+.ai-typing span{animation:dot 1.4s infinite}
+.ai-typing span:nth-child(2){animation-delay:.2s}
+.ai-typing span:nth-child(3){animation-delay:.4s}
+@keyframes dot{0%,60%,100%{opacity:.3}30%{opacity:1}}
+.ai-input-bar{padding:12px 16px;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0;padding-bottom:calc(12px + env(safe-area-inset-bottom,0))}
+.ai-input-bar input{flex:1;padding:12px 16px;border:1.5px solid var(--border);border-radius:24px;font-size:15px;outline:none;background:var(--bg)}
+.ai-input-bar input:focus{border-color:var(--primary)}
+.ai-send{width:48px;height:48px;border-radius:50%;background:var(--primary);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.15s}
+.ai-send:active{transform:scale(.92)}
+.ai-send:disabled{opacity:.4;cursor:not-allowed}
+.ai-send svg{width:22px;height:22px;fill:#fff}
+.ai-suggest{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.ai-suggest button{padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);font-size:12px;color:var(--text-secondary);cursor:pointer;transition:.2s}
+.ai-suggest button:hover{border-color:var(--primary);color:var(--primary)}
+
 @media(min-width:768px){
   .bottom-nav{top:0;bottom:auto;left:0;right:auto;width:80px;height:100vh;flex-direction:column;border-top:none;border-right:1px solid var(--border);padding:24px 0;box-shadow:2px 0 20px rgba(0,0,0,.04)}
   .nav-item{padding:16px 0}
@@ -609,6 +640,16 @@ body{font-family:'Inter',-apple-system,"Microsoft YaHei","PingFang SC",sans-seri
     </div>
   </div>
   <div class="settings-section">
+    <h3>AI 助手</h3>
+    <div class="settings-row">
+      <span class="label">Groq API Key</span>
+      <button class="btn btn-outline btn-sm" onclick="setGroqKey()">设置</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px">
+      免费申请：https://console.groq.com
+    </div>
+  </div>
+  <div class="settings-section">
     <h3>数据管理</h3>
     <div class="settings-row">
       <span class="label">导出商品数据</span>
@@ -646,6 +687,35 @@ body{font-family:'Inter',-apple-system,"Microsoft YaHei","PingFang SC",sans-seri
       <button class="btn btn-outline" onclick="closeModal('pass-modal')">取消</button>
       <button class="btn btn-primary" onclick="changePassword()">确认修改</button>
     </div>
+  </div>
+</div>
+
+<!-- AI 助手按钮 -->
+<button class="ai-fab" id="ai-fab" onclick="toggleAI()">🤖</button>
+
+<!-- AI 助手面板 -->
+<div class="ai-panel" id="ai-panel">
+  <div class="ai-header">
+    <span style="font-size:24px">🤖</span>
+    <h3>AI 助手</h3>
+    <button class="ai-close" onclick="toggleAI()">&times;</button>
+  </div>
+  <div class="ai-messages" id="ai-messages">
+    <div class="ai-msg bot">
+      <div>你好！我是你的AI助手，可以帮你操作记账系统。试试说：</div>
+    </div>
+    <div class="ai-suggest" id="ai-suggest">
+      <button onclick="aiSuggest(this)">记账：张三买了3个弯头，欠着</button>
+      <button onclick="aiSuggest(this)">今天卖了多少</button>
+      <button onclick="aiSuggest(this)">添加商品：PVC管50mm，15元</button>
+      <button onclick="aiSuggest(this)">李四还欠多少</button>
+    </div>
+  </div>
+  <div class="ai-input-bar">
+    <input type="text" id="ai-input" placeholder="输入指令..." autocomplete="off">
+    <button class="ai-send" id="ai-send" onclick="sendAI()">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
   </div>
 </div>
 
@@ -1423,6 +1493,15 @@ document.getElementById('login-pass').addEventListener('keydown', e => { if (e.k
 document.getElementById('login-user').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pass').focus(); });
 
 // ========== 修改密码 ==========
+function setGroqKey() {
+  const current = localStorage.getItem('groq_key') || '';
+  const key = prompt('请输入 Groq API Key：', current);
+  if (key !== null) {
+    localStorage.setItem('groq_key', key.trim());
+    showToast(key.trim() ? 'API Key 已保存' : 'API Key 已清除');
+  }
+}
+
 function openChangePass() {
   document.getElementById('old-pass').value = '';
   document.getElementById('new-pass').value = '';
@@ -1494,6 +1573,320 @@ async function initApp() {
     showToast('初始化失败，请检查网络');
   }
 }
+
+// ========== AI 助手 ==========
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+
+const AI_SYSTEM = `你是一个商铺记账系统的AI助手。用户会用中文告诉你要做什么，你需要解析指令并返回JSON格式的操作。
+
+你必须返回以下JSON格式之一（不要返回其他内容，只返回JSON）：
+
+1. 添加商品：
+{"action":"add_product","name":"商品名","price":价格数字,"category":"分类(可选)"}
+
+2. 查询商品：
+{"action":"query_products","keyword":"关键词(可选)"}
+
+3. 添加客户：
+{"action":"add_customer","name":"客户名","phone":"电话(可选)","address":"地址(可选)","note":"备注(可选)"}
+
+4. 记账（客户欠款）：
+{"action":"add_transaction","customer_name":"客户名","type":"purchase或repair或other","description":"买了什么","amount":总金额,"paid":已付金额,"operator":"经手人(可选)"}
+
+5. 查询客户欠款：
+{"action":"query_debt","customer_name":"客户名"}
+
+6. 还款：
+{"action":"add_payment","customer_name":"客户名","amount":还款金额,"operator":"经手人(可选)"}
+
+7. 查询今日销售：
+{"action":"query_today_sales"}
+
+8. 查询本月销售：
+{"action":"query_month_sales"}
+
+9. 完成收银订单：
+{"action":"complete_order","items":[{"product_name":"商品名","qty":数量}]}
+
+10. 聊天回复（当用户只是聊天或问题无法解析为操作时）：
+{"action":"chat","message":"你的回复内容"}
+
+注意：
+- 如果信息不完整，返回chat action询问缺少的信息
+- 金额必须是数字
+- 客户名要尽量匹配已有客户
+- 商品名要尽量匹配已有商品`;
+
+function toggleAI() {
+  const panel = document.getElementById('ai-panel');
+  const fab = document.getElementById('ai-fab');
+  panel.classList.toggle('show');
+  fab.classList.toggle('open');
+  if (panel.classList.contains('show')) {
+    document.getElementById('ai-input').focus();
+  }
+}
+
+function aiSuggest(btn) {
+  document.getElementById('ai-input').value = btn.textContent;
+  sendAI();
+}
+
+function addAIMsg(text, type, action) {
+  const container = document.getElementById('ai-messages');
+  const suggest = document.getElementById('ai-suggest');
+  if (suggest) suggest.remove();
+
+  const div = document.createElement('div');
+  div.className = 'ai-msg ' + type;
+  if (action) {
+    div.innerHTML = '<div class="action-tag">' + action + '</div><div>' + text + '</div>';
+  } else {
+    div.textContent = text;
+  }
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+function showTyping() {
+  const container = document.getElementById('ai-messages');
+  const div = document.createElement('div');
+  div.className = 'ai-typing';
+  div.id = 'ai-typing';
+  div.innerHTML = '<span>●</span> <span>●</span> <span>●</span>';
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function hideTyping() {
+  document.getElementById('ai-typing')?.remove();
+}
+
+async function sendAI() {
+  const input = document.getElementById('ai-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  const apiKey = localStorage.getItem('groq_key') || '';
+  if (!apiKey) {
+    addAIMsg('请先在设置页填写 Groq API Key', 'bot', '提示');
+    return;
+  }
+
+  addAIMsg(text, 'user');
+  showTyping();
+
+  const sendBtn = document.getElementById('ai-send');
+  sendBtn.disabled = true;
+
+  try {
+    // 准备当前数据上下文
+    const ctx = {
+      products: products.map(p => ({ name: p.name, price: p.price, category: p.category })),
+      customers: customers.map(c => ({ name: c.name, phone: c.phone })),
+      debts: customerDebtCache
+    };
+
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [
+          { role: 'system', content: AI_SYSTEM + '\n\n当前系统数据：\n商品：' + JSON.stringify(ctx.products) + '\n客户：' + JSON.stringify(ctx.customers) + '\n欠款：' + JSON.stringify(ctx.debts) },
+          { role: 'user', content: text }
+        ],
+        temperature: 0.1,
+        max_tokens: 500
+      })
+    });
+
+    const data = await res.json();
+    hideTyping();
+
+    if (data.error) {
+      addAIMsg('AI 请求失败：' + (data.error.message || '未知错误'), 'bot', '错误');
+      return;
+    }
+
+    let reply = data.choices?.[0]?.message?.content || '';
+    reply = reply.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+    let action;
+    try {
+      action = JSON.parse(reply);
+    } catch (e) {
+      // 如果不是JSON，当作聊天回复
+      addAIMsg(reply, 'bot');
+      return;
+    }
+
+    await executeAIAction(action);
+
+  } catch (e) {
+    hideTyping();
+    addAIMsg('网络错误：' + e.message, 'bot', '错误');
+  } finally {
+    sendBtn.disabled = false;
+    input.focus();
+  }
+}
+
+async function executeAIAction(action) {
+  try {
+    switch (action.action) {
+      case 'add_product': {
+        const p = { id: genId(), name: action.name, price: action.price, category: action.category || '', image: null };
+        await dbSaveProduct(p);
+        await loadProducts();
+        renderProducts();
+        addAIMsg(`已添加商品「${action.name}」，价格 ¥${action.price}`, 'bot', '✓ 添加商品');
+        break;
+      }
+
+      case 'query_products': {
+        let list = products;
+        if (action.keyword) list = list.filter(p => p.name.includes(action.keyword));
+        if (list.length === 0) {
+          addAIMsg('没有找到相关商品', 'bot', '查询商品');
+        } else {
+          const text = list.map(p => `${p.name} ¥${p.price}`).join('\n');
+          addAIMsg(`找到 ${list.length} 件商品：\n${text}`, 'bot', '查询商品');
+        }
+        break;
+      }
+
+      case 'add_customer': {
+        const existing = customers.find(c => c.name === action.name);
+        if (existing) {
+          addAIMsg(`客户「${action.name}」已存在`, 'bot', '提示');
+        } else {
+          await dbSaveCustomer({ id: genId(), name: action.name, phone: action.phone || '', address: action.address || '', note: action.note || '' });
+          await loadCustomers();
+          renderCustomers();
+          addAIMsg(`已添加客户「${action.name}」`, 'bot', '✓ 添加客户');
+        }
+        break;
+      }
+
+      case 'add_transaction': {
+        let customer = customers.find(c => c.name === action.customer_name);
+        if (!customer) {
+          customer = { id: genId(), name: action.customer_name, phone: '', address: '', note: '' };
+          await dbSaveCustomer(customer);
+          await loadCustomers();
+        }
+        const tx = {
+          id: genId(),
+          customer_id: customer.id,
+          type: action.type || 'purchase',
+          description: action.description,
+          amount: action.amount,
+          paid: action.paid || 0,
+          operator: action.operator || ''
+        };
+        await dbSaveTransaction(tx);
+        const owed = tx.amount - tx.paid;
+        const msg = owed > 0
+          ? `已记账：${action.customer_name} - ${action.description}\n总金额 ¥${tx.amount}，已付 ¥${tx.paid}，欠款 ¥${owed}`
+          : `已记账：${action.customer_name} - ${action.description}\n总金额 ¥${tx.amount}，已全额付清`;
+        addAIMsg(msg, 'bot', '✓ 记账');
+        break;
+      }
+
+      case 'query_debt': {
+        const customer = customers.find(c => c.name === action.customer_name);
+        if (!customer) {
+          addAIMsg(`没有找到客户「${action.customer_name}」`, 'bot', '查询');
+        } else {
+          await loadAllCustomerDebts();
+          const debt = customerDebtCache[customer.id] || 0;
+          if (debt > 0) {
+            addAIMsg(`${action.customer_name} 当前欠款 ¥${debt.toFixed(1)}`, 'bot', '查询欠款');
+          } else {
+            addAIMsg(`${action.customer_name} 没有欠款，账目已清`, 'bot', '查询欠款');
+          }
+        }
+        break;
+      }
+
+      case 'add_payment': {
+        const customer = customers.find(c => c.name === action.customer_name);
+        if (!customer) {
+          addAIMsg(`没有找到客户「${action.customer_name}」`, 'bot', '查询');
+        } else {
+          const tx = {
+            id: genId(),
+            customer_id: customer.id,
+            type: 'payment',
+            description: '还款',
+            amount: 0,
+            paid: action.amount,
+            operator: action.operator || ''
+          };
+          await dbSaveTransaction(tx);
+          await loadAllCustomerDebts();
+          const remaining = customerDebtCache[customer.id] || 0;
+          addAIMsg(`已记录 ${action.customer_name} 还款 ¥${action.amount}\n剩余欠款 ¥${remaining.toFixed(1)}`, 'bot', '✓ 还款');
+        }
+        break;
+      }
+
+      case 'query_today_sales': {
+        const today = new Date().toISOString().slice(0, 10);
+        const todayOrders = orders.filter(o => o.date.slice(0, 10) === today);
+        const total = todayOrders.reduce((s, o) => s + o.total, 0);
+        addAIMsg(`今日共 ${todayOrders.length} 笔订单，合计 ¥${total.toFixed(1)}`, 'bot', '今日销售');
+        break;
+      }
+
+      case 'query_month_sales': {
+        const thisMonth = new Date().toISOString().slice(0, 7);
+        const monthOrders = orders.filter(o => o.date.slice(0, 7) === thisMonth);
+        const total = monthOrders.reduce((s, o) => s + o.total, 0);
+        addAIMsg(`本月共 ${monthOrders.length} 笔订单，合计 ¥${total.toFixed(1)}`, 'bot', '本月销售');
+        break;
+      }
+
+      case 'complete_order': {
+        const orderItems = [];
+        let total = 0;
+        for (const item of action.items) {
+          const p = products.find(x => x.name.includes(item.product_name));
+          if (!p) {
+            addAIMsg(`找不到商品「${item.product_name}」`, 'bot', '错误');
+            return;
+          }
+          const subtotal = p.price * item.qty;
+          total += subtotal;
+          orderItems.push({ productId: p.id, name: p.name, price: p.price, qty: item.qty, image: p.image });
+        }
+        const order = { id: genId(), date: new Date().toISOString(), items: orderItems, total };
+        await dbSaveOrder(order);
+        orders.unshift(order);
+        addAIMsg(`订单已完成！共 ${orderItems.length} 种商品，合计 ¥${total.toFixed(1)}`, 'bot', '✓ 完成订单');
+        break;
+      }
+
+      case 'chat':
+      default:
+        addAIMsg(action.message || '不太明白你的意思，请再说详细点', 'bot');
+        break;
+    }
+  } catch (e) {
+    addAIMsg('操作失败：' + e.message, 'bot', '错误');
+  }
+}
+
+// 回车发送
+document.getElementById('ai-input')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAI(); }
+});
 
 checkLogin();
 
