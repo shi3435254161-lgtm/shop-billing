@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>商铺记账系统</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --primary:#6366f1;--primary-light:#818cf8;--primary-dark:#4f46e5;
+  --accent:#f59e0b;--success:#10b981;--danger:#ef4444;
+  --bg:#f8fafc;--surface:#ffffff;--surface-hover:#f1f5f9;
+  --text:#1e293b;--text-secondary:#64748b;--text-muted:#94a3b8;
+  --border:#e2e8f0;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.05);
+  --shadow:0 4px 6px -1px rgba(0,0,0,.07),0 2px 4px -2px rgba(0,0,0,.05);
+  --shadow-lg:0 10px 15px -3px rgba(0,0,0,.08),0 4px 6px -4px rgba(0,0,0,.05);
+  --shadow-xl:0 20px 25px -5px rgba(0,0,0,.1),0 8px 10px -6px rgba(0,0,0,.06);
+  --radius:12px;--radius-lg:16px;--radius-xl:20px;
+}
+body{font-family:'Inter',-apple-system,"Microsoft YaHei","PingFang SC",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* 底部导航 */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -4px 20px rgba(0,0,0,.06)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 0 8px;cursor:pointer;transition:all .2s;position:relative;user-select:none;-webkit-tap-highlight-color:transparent}
+.nav-item svg{width:24px;height:24px;stroke:var(--text-muted);fill:none;stroke-width:1.8;transition:all .2s}
+.nav-item span{font-size:11px;margin-top:3px;color:var(--text-muted);font-weight:500;transition:color .2s}
+.nav-item.active svg{stroke:var(--primary)}
+.nav-item.active span{color:var(--primary);font-weight:600}
+.nav-item.active::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:24px;height:3px;background:var(--primary);border-radius:0 0 3px 3px}
+
+/* 页面 */
+.page{display:none;padding:16px 16px 90px;max-width:960px;margin:0 auto}
+.page.active{display:block;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-top:4px}
+.page-title{font-size:26px;font-weight:800;letter-spacing:-.5px}
+.page-subtitle{font-size:13px;color:var(--text-muted);margin-top:2px}
+
+/* 按钮 */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 20px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;user-select:none}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;box-shadow:0 2px 8px rgba(99,102,241,.3)}
+.btn-primary:hover{box-shadow:0 4px 14px rgba(99,102,241,.4)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-success{background:linear-gradient(135deg,var(--success),#059669);color:#fff;box-shadow:0 2px 8px rgba(16,185,129,.3)}
+.btn-success:hover{box-shadow:0 4px 14px rgba(16,185,129,.4)}
+.btn-outline{background:var(--surface);color:var(--primary);border:1.5px solid var(--border)}
+.btn-outline:hover{border-color:var(--primary);background:#eef2ff}
+.btn-sm{padding:7px 14px;font-size:13px;border-radius:8px}
+.btn-ghost{background:transparent;color:var(--text-secondary);padding:8px;border-radius:8px}
+.btn-ghost:hover{background:var(--surface-hover)}
+
+/* 搜索 */
+.search-box{position:relative;margin-bottom:16px}
+.search-box svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--text-muted);fill:none;stroke-width:2}
+.search-box input{width:100%;padding:12px 14px 12px 42px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:14px;background:var(--surface);transition:all .2s;color:var(--text)}
+.search-box input::placeholder{color:var(--text-muted)}
+.search-box input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+
+/* 分类 */
+.cat-scroll{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
+.cat-scroll::-webkit-scrollbar{display:none}
+.cat-chip{flex-shrink:0;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);color:var(--text-secondary);transition:all .2s;white-space:nowrap}
+.cat-chip:hover{border-color:var(--primary-light);color:var(--primary)}
+.cat-chip.active{background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:0 2px 8px rgba(99,102,241,.25)}
+
+/* 商品网格 */
+.product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:14px}
+.product-card{background:var(--surface);border-radius:var(--radius-lg);overflow:hidden;cursor:pointer;position:relative;box-shadow:var(--shadow-sm);border:1px solid var(--border);transition:all .25s cubic-bezier(.4,0,.2,1)}
+.product-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:transparent}
+.product-card:active{transform:translateY(-2px)}
+.product-card .card-img-wrap{width:100%;aspect-ratio:1;overflow:hidden;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);position:relative}
+.product-card img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.product-card:hover img{transform:scale(1.05)}
+.product-card .placeholder-icon{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;opacity:.4}
+.product-card .card-body{padding:12px}
+.product-card .card-name{font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.4}
+.product-card .card-price{font-size:18px;font-weight:800;color:var(--danger);margin-top:4px;letter-spacing:-.5px}
+.product-card .card-price::before{content:"\00a5";font-size:13px;font-weight:600;margin-right:1px}
+.product-card .card-category{display:inline-block;font-size:11px;color:var(--primary);background:#eef2ff;padding:2px 8px;border-radius:6px;margin-top:6px;font-weight:500}
+.card-float-actions{position:absolute;top:8px;right:8px;display:flex;gap:6px;opacity:0;transform:translateY(-4px);transition:all .2s;z-index:2}
+.product-card:hover .card-float-actions{opacity:1;transform:translateY(0)}
+.card-float-actions button{width:32px;height:32px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(8px);box-shadow:0 2px 8px rgba(0,0,0,.15);transition:transform .15s}
+.card-float-actions button:hover{transform:scale(1.1)}
+.card-float-actions button svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2}
+.btn-float-edit{background:rgba(99,102,241,.9)}
+.btn-float-del{background:rgba(239,68,68,.9)}
+.cashier-card .add-badge{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;background:var(--success);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;opacity:0;transform:scale(.6);transition:all .2s;box-shadow:0 2px 8px rgba(16,185,129,.4)}
+.cashier-card:active .add-badge{opacity:1;transform:scale(1)}
+.cashier-card.in-order .add-badge{opacity:1;transform:scale(1)}
+
+/* 订单面板 */
+.order-panel{background:var(--surface);border-radius:var(--radius-xl);margin-top:20px;overflow:hidden;box-shadow:var(--shadow-lg);border:1px solid var(--border)}
+.order-panel-header{padding:16px 20px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff}
+.order-panel-header h3{font-size:16px;font-weight:700}
+.order-panel-header .order-count{background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.order-list{padding:0 16px;max-height:320px;overflow-y:auto}
+.order-line{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #f1f5f9}
+.order-line:last-child{border-bottom:none}
+.order-line-img{width:48px;height:48px;border-radius:10px;object-fit:cover;background:#f1f5f9;flex-shrink:0}
+.order-line-info{flex:1;min-width:0}
+.order-line-name{font-size:14px;font-weight:600;color:var(--text)}
+.order-line-price{font-size:12px;color:var(--text-muted);margin-top:2px}
+.qty-pill{display:flex;align-items:center;gap:0;background:var(--bg);border-radius:10px;overflow:hidden;border:1.5px solid var(--border)}
+.qty-pill button{width:34px;height:34px;border:none;background:transparent;font-size:16px;font-weight:600;cursor:pointer;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;transition:background .15s}
+.qty-pill button:hover{background:var(--surface-hover)}
+.qty-pill button:active{background:var(--border)}
+.qty-pill .qty-val{width:32px;text-align:center;font-size:14px;font-weight:700;color:var(--text);border-left:1.5px solid var(--border);border-right:1.5px solid var(--border);line-height:34px}
+.order-line-subtotal{font-size:16px;font-weight:800;color:var(--danger);min-width:56px;text-align:right;letter-spacing:-.5px}
+.order-line-del{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px;border-radius:6px;transition:all .15s;flex-shrink:0}
+.order-line-del:hover{color:var(--danger);background:#fef2f2}
+.order-line-del svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
+.order-footer{padding:16px 20px;border-top:2px solid #f1f5f9;background:#fafbfc}
+.order-total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.order-total-label{font-size:15px;font-weight:600;color:var(--text-secondary)}
+.order-total-amount{font-size:32px;font-weight:900;color:var(--danger);letter-spacing:-1px}
+.order-total-amount::before{content:"\00a5";font-size:18px;font-weight:700}
+.order-btn-row{display:flex;gap:10px}
+.order-btn-row .btn{flex:1;padding:14px;font-size:15px}
+
+/* 弹窗 */
+.modal-mask{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);z-index:300;display:none;align-items:flex-end;justify-content:center}
+.modal-mask.show{display:flex;animation:maskIn .2s ease}
+@keyframes maskIn{from{opacity:0}to{opacity:1}}
+.modal-sheet{background:var(--surface);border-radius:var(--radius-xl) var(--radius-xl) 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding:24px 20px 32px;animation:slideUp .3s cubic-bezier(.16,1,.3,1)}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px}
+.modal-title{font-size:20px;font-weight:800;margin-bottom:20px;text-align:center}
+.img-upload-area{width:130px;height:130px;margin:0 auto 20px;border:2px dashed var(--border);border-radius:var(--radius-lg);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;overflow:hidden;position:relative;background:var(--bg)}
+.img-upload-area:hover{border-color:var(--primary);background:#eef2ff}
+.img-upload-area img{width:100%;height:100%;object-fit:cover}
+.img-upload-area .upload-hint{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--text-muted)}
+.img-upload-area .upload-hint svg{width:28px;height:28px;stroke:var(--text-muted);fill:none;stroke-width:1.5}
+.img-upload-area .upload-hint span{font-size:12px}
+.img-upload-area input{display:none}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px}
+.field input,.field textarea,.field select{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;background:var(--bg);transition:all .2s;color:var(--text);font-family:inherit}
+.field textarea{resize:vertical;min-height:60px}
+.field input::placeholder,.field textarea::placeholder{color:var(--text-muted)}
+.field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--primary);background:var(--surface);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+.modal-btn-row{display:flex;gap:10px;margin-top:24px}
+.modal-btn-row .btn{flex:1;padding:14px;font-size:15px}
+
+/* 历史订单 */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.stat-card{background:var(--surface);border-radius:var(--radius);padding:16px 12px;text-align:center;border:1px solid var(--border)}
+.stat-card .stat-icon{font-size:20px;margin-bottom:4px}
+.stat-card .stat-value{font-size:22px;font-weight:800;color:var(--primary);letter-spacing:-.5px}
+.stat-card .stat-label{font-size:11px;color:var(--text-muted);margin-top:2px;font-weight:500}
+.date-filter{display:flex;gap:8px;margin-bottom:16px;align-items:center}
+.date-filter input[type="date"]{flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;background:var(--surface)}
+.date-filter input:focus{outline:none;border-color:var(--primary)}
+.history-card{background:var(--surface);border-radius:var(--radius-lg);margin-bottom:12px;overflow:hidden;border:1px solid var(--border);transition:box-shadow .2s}
+.history-card:hover{box-shadow:var(--shadow)}
+.history-card-head{padding:14px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.history-card-date{font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px}
+.history-card-date svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+.history-card-total{font-size:20px;font-weight:800;color:var(--danger)}
+.history-card-total::before{content:"\00a5";font-size:13px}
+.history-card-summary{padding:0 16px 12px;font-size:12px;color:var(--text-muted);line-height:1.6}
+.history-card-detail{max-height:0;overflow:hidden;transition:max-height .3s ease;background:var(--bg);border-top:1px solid transparent}
+.history-card.expanded .history-card-detail{max-height:500px;border-top-color:var(--border)}
+.detail-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;font-size:13px}
+.detail-row-name{color:var(--text);font-weight:500}
+.detail-row-right{display:flex;align-items:center;gap:12px}
+.detail-row-qty{color:var(--text-muted);font-size:12px}
+.detail-row-price{font-weight:700;color:var(--text)}
+.history-card-del{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px 8px;border-radius:6px;font-size:12px;margin-left:8px}
+.history-card-del:hover{color:var(--danger);background:#fef2f2}
+
+/* ===== 客户管理 ===== */
+.customer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.customer-card{background:var(--surface);border-radius:var(--radius-lg);padding:18px;border:1px solid var(--border);cursor:pointer;transition:all .25s;position:relative}
+.customer-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:transparent}
+.customer-card .c-name{font-size:17px;font-weight:700;margin-bottom:4px}
+.customer-card .c-phone{font-size:13px;color:var(--text-muted);margin-bottom:10px}
+.customer-card .c-debt{font-size:24px;font-weight:900;letter-spacing:-.5px}
+.customer-card .c-debt.positive{color:var(--danger)}
+.customer-card .c-debt.zero{color:var(--success)}
+.customer-card .c-debt-label{font-size:12px;color:var(--text-muted);margin-top:2px}
+.customer-card .c-actions{position:absolute;top:12px;right:12px;display:flex;gap:4px;opacity:0;transition:.2s}
+.customer-card:hover .c-actions{opacity:1}
+.c-actions button{width:30px;height:30px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s}
+.c-actions button:hover{transform:scale(1.1)}
+.c-actions button svg{width:15px;height:15px;stroke:#fff;fill:none;stroke-width:2}
+.c-edit{background:rgba(99,102,241,.9)}
+.c-del{background:rgba(239,68,68,.9)}
+
+/* 客户详情 */
+.customer-detail{display:none}
+.customer-detail.active{display:block}
+.detail-header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.detail-back{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+.detail-back:hover{border-color:var(--primary);background:#eef2ff}
+.detail-back svg{width:20px;height:20px;stroke:var(--text);fill:none;stroke-width:2}
+.detail-info{flex:1}
+.detail-name{font-size:22px;font-weight:800}
+.detail-phone{font-size:13px;color:var(--text-muted);margin-top:2px}
+.detail-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.detail-stat{background:var(--surface);border-radius:var(--radius);padding:14px;text-align:center;border:1px solid var(--border)}
+.detail-stat .ds-val{font-size:22px;font-weight:800}
+.detail-stat .ds-label{font-size:11px;color:var(--text-muted);margin-top:2px}
+.ds-val.debt{color:var(--danger)}
+.ds-val.paid{color:var(--success)}
+.ds-val.count{color:var(--primary)}
+.tx-list{display:flex;flex-direction:column;gap:10px}
+.tx-card{background:var(--surface);border-radius:var(--radius);padding:14px 16px;border:1px solid var(--border);position:relative}
+.tx-card .tx-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.tx-card .tx-type{font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px}
+.tx-type.purchase{background:#fef2f2;color:#ef4444}
+.tx-type.repair{background:#fff7ed;color:#f59e0b}
+.tx-type.payment{background:#ecfdf5;color:#10b981}
+.tx-card .tx-date{font-size:12px;color:var(--text-muted)}
+.tx-card .tx-desc{font-size:14px;color:var(--text);margin-bottom:6px}
+.tx-card .tx-amounts{display:flex;gap:16px;font-size:13px}
+.tx-card .tx-amounts span{font-weight:600}
+.tx-amt{color:var(--danger)}
+.tx-paid{color:var(--success)}
+.tx-owed{color:var(--accent)}
+.tx-del{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px;border-radius:6px;opacity:0;transition:.2s}
+.tx-card:hover .tx-del{opacity:1}
+.tx-del:hover{color:var(--danger);background:#fef2f2}
+.tx-del svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* 空状态 */
+.empty-state{display:flex;flex-direction:column;align-items:center;padding:60px 20px;color:var(--text-muted)}
+.empty-state svg{width:64px;height:64px;stroke:var(--border);fill:none;stroke-width:1.2;margin-bottom:16px}
+.empty-state .empty-title{font-size:16px;font-weight:600;color:var(--text-secondary);margin-bottom:4px}
+.empty-state .empty-desc{font-size:13px}
+
+/* Toast */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--text);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:var(--shadow-xl);z-index:999;transition:transform .4s cubic-bezier(.16,1,.3,1);pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* Loading */
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--text-muted);font-size:14px;gap:8px}
+.spinner{width:20px;height:20px;border:2.5px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 登录页 */
+.login-mask{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-box{background:var(--surface);border-radius:var(--radius-xl);padding:32px 24px;width:100%;max-width:360px;box-shadow:var(--shadow-xl);text-align:center}
+.login-logo{font-size:48px;margin-bottom:8px}
+.login-title{font-size:22px;font-weight:800;margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--text-muted);margin-bottom:28px}
+.login-box .field{text-align:left}
+.login-box .btn{width:100%;padding:14px;font-size:16px;margin-top:8px}
+.login-error{font-size:13px;color:var(--danger);margin-top:8px;min-height:20px}
+
+/* 设置页 */
+.settings-section{background:var(--surface);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px;border:1px solid var(--border)}
+.settings-section h3{font-size:15px;font-weight:700;margin-bottom:14px}
+.settings-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f1f5f9}
+.settings-row:last-child{border-bottom:none}
+.settings-row .label{font-size:14px;color:var(--text)}
+.settings-row .value{font-size:14px;color:var(--text-muted)}
+.settings-row .btn{padding:6px 14px;font-size:13px}
+
+/* 响应式 */
+@media(min-width:768px){
+  .bottom-nav{top:0;bottom:auto;left:0;right:auto;width:80px;height:100vh;flex-direction:column;border-top:none;border-right:1px solid var(--border);padding:24px 0;box-shadow:2px 0 20px rgba(0,0,0,.04)}
+  .nav-item{padding:16px 0}
+  .nav-item.active::before{top:50%;left:0;right:auto;transform:translateY(-50%);width:3px;height:24px;border-radius:0 3px 3px 0}
+  .page{margin-left:80px;padding:24px 32px 40px}
+  .product-grid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:16px}
+  .modal-mask{align-items:center}
+  .modal-sheet{border-radius:var(--radius-xl);max-height:85vh}
+}
+@media(max-width:380px){
+  .product-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .stats-row{grid-template-columns:1fr}
+  .customer-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- 登录页 -->
+<div class="login-mask" id="login-page">
+  <div class="login-box">
+    <div class="login-logo">🏪</div>
+    <div class="login-title">商铺记账系统</div>
+    <div class="login-sub">请输入账号密码登录</div>
+    <div class="field">
+      <label>账号</label>
+      <input type="text" id="login-user" placeholder="请输入账号" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>密码</label>
+      <input type="password" id="login-pass" placeholder="请输入密码" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary" id="btn-login" onclick="doLogin()">登 录</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- 主应用（登录后显示） -->
+<div id="app-main" style="display:none">
+
+<!-- 底部导航 -->
+<div class="bottom-nav">
+  <div class="nav-item active" onclick="switchTab('products')" data-tab="products">
+    <svg viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+    <span>商品</span>
+  </div>
+  <div class="nav-item" onclick="switchTab('cashier')" data-tab="cashier">
+    <svg viewBox="0 0 24 24"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
+    <span>收银</span>
+  </div>
+  <div class="nav-item" onclick="switchTab('history')" data-tab="history">
+    <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+    <span>订单</span>
+  </div>
+  <div class="nav-item" onclick="switchTab('customers')" data-tab="customers">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100 8 4 4 0 000-8zm13 0v6m-3-3h6"/></svg>
+    <span>客户</span>
+  </div>
+  <div class="nav-item" onclick="switchTab('settings')" data-tab="settings">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    <span>设置</span>
+  </div>
+</div>
+
+<!-- ========== 商品管理 ========== -->
+<div id="page-products" class="page active">
+  <div class="page-header">
+    <div>
+      <div class="page-title">商品库</div>
+      <div class="page-subtitle" id="product-count">加载中...</div>
+    </div>
+    <button class="btn btn-primary" onclick="openAddProduct()">
+      <svg style="width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+      添加
+    </button>
+  </div>
+  <div class="search-box">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <input type="text" id="product-search" placeholder="搜索商品名称..." oninput="renderProducts()">
+  </div>
+  <div class="cat-scroll" id="cat-filter"></div>
+  <div class="product-grid" id="product-grid"></div>
+  <div class="empty-state" id="product-empty" style="display:none">
+    <svg viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+    <div class="empty-title">还没有商品</div>
+    <div class="empty-desc">点击右上角"添加"开始录入商品</div>
+  </div>
+</div>
+
+<!-- ========== 收银台 ========== -->
+<div id="page-cashier" class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">收银台</div>
+      <div class="page-subtitle">点击商品加入订单</div>
+    </div>
+  </div>
+  <div class="search-box">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <input type="text" id="cashier-search" placeholder="搜索商品..." oninput="renderCashier()">
+  </div>
+  <div class="cat-scroll" id="cashier-cat-filter"></div>
+  <div class="product-grid" id="cashier-grid"></div>
+  <div class="empty-state" id="cashier-empty" style="display:none">
+    <svg viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+    <div class="empty-title">暂无商品</div>
+    <div class="empty-desc">请先在"商品"页添加商品</div>
+  </div>
+  <div class="order-panel" id="order-panel" style="display:none">
+    <div class="order-panel-header">
+      <h3>当前订单</h3>
+      <span class="order-count" id="order-count">0 件</span>
+    </div>
+    <div class="order-list" id="order-items"></div>
+    <div class="order-footer">
+      <div class="order-total-row">
+        <span class="order-total-label">合计</span>
+        <span class="order-total-amount" id="order-total">0</span>
+      </div>
+      <div class="order-btn-row">
+        <button class="btn btn-outline" onclick="clearOrder()">清空</button>
+        <button class="btn btn-success" onclick="completeOrder()">
+          <svg style="width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+          完成订单
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 历史订单 ========== -->
+<div id="page-history" class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">历史订单</div>
+      <div class="page-subtitle">查看销售记录</div>
+    </div>
+  </div>
+  <div class="stats-row" id="history-stats"></div>
+  <div class="date-filter">
+    <input type="date" id="history-date" onchange="renderHistory()">
+    <button class="btn btn-sm btn-outline" onclick="document.getElementById('history-date').value='';renderHistory()">全部</button>
+  </div>
+  <div id="history-list"></div>
+  <div class="empty-state" id="history-empty" style="display:none">
+    <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    <div class="empty-title">暂无订单</div>
+    <div class="empty-desc">完成一笔订单后会显示在这里</div>
+  </div>
+</div>
+
+<!-- ========== 客户管理 ========== -->
+<div id="page-customers" class="page">
+  <!-- 客户列表视图 -->
+  <div id="customer-list-view">
+    <div class="page-header">
+      <div>
+        <div class="page-title">客户管理</div>
+        <div class="page-subtitle" id="customer-count">加载中...</div>
+      </div>
+      <button class="btn btn-primary" onclick="openAddCustomer()">
+        <svg style="width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+        添加客户
+      </button>
+    </div>
+    <div class="search-box">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="customer-search" placeholder="搜索客户姓名或电话..." oninput="renderCustomers()">
+    </div>
+    <div class="customer-grid" id="customer-grid"></div>
+    <div class="empty-state" id="customer-empty" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 11h-6"/></svg>
+      <div class="empty-title">还没有客户</div>
+      <div class="empty-desc">点击右上角"添加客户"开始记录</div>
+    </div>
+  </div>
+
+  <!-- 客户详情视图 -->
+  <div id="customer-detail-view" class="customer-detail">
+    <div class="detail-header">
+      <button class="detail-back" onclick="showCustomerList()">
+        <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="detail-info">
+        <div class="detail-name" id="detail-name"></div>
+        <div class="detail-phone" id="detail-phone"></div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openAddTransaction()">
+        <svg style="width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+        记账
+      </button>
+    </div>
+    <div class="detail-stats" id="detail-stats"></div>
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">交易记录</h3>
+    <div class="tx-list" id="tx-list"></div>
+    <div class="empty-state" id="tx-empty" style="display:none">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      <div class="empty-title">暂无记录</div>
+      <div class="empty-desc">点击右上角"记账"添加</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 商品弹窗 ========== -->
+<div class="modal-mask" id="product-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">添加商品</div>
+    <div class="img-upload-area" onclick="document.getElementById('img-input').click()">
+      <div class="upload-hint" id="upload-hint">
+        <svg viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <span>上传商品图片</span>
+      </div>
+      <img id="img-preview" style="display:none">
+      <input type="file" id="img-input" accept="image/*" onchange="previewImg(event)">
+    </div>
+    <div class="field">
+      <label>商品名称</label>
+      <input type="text" id="input-name" placeholder="例如：PVC直接 25mm">
+    </div>
+    <div class="field">
+      <label>价格（元）</label>
+      <input type="number" id="input-price" placeholder="0.00" step="0.1" min="0">
+    </div>
+    <div class="field">
+      <label>分类</label>
+      <input type="text" id="input-category" placeholder="例如：管件、阀门、辅材" list="cat-list">
+      <datalist id="cat-list"></datalist>
+    </div>
+    <div class="modal-btn-row">
+      <button class="btn btn-outline" onclick="closeModal('product-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveProduct()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 客户弹窗 ========== -->
+<div class="modal-mask" id="customer-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="customer-modal-title">添加客户</div>
+    <div class="field">
+      <label>客户姓名 *</label>
+      <input type="text" id="c-input-name" placeholder="例如：张三">
+    </div>
+    <div class="field">
+      <label>电话</label>
+      <input type="text" id="c-input-phone" placeholder="手机号">
+    </div>
+    <div class="field">
+      <label>地址</label>
+      <input type="text" id="c-input-address" placeholder="地址">
+    </div>
+    <div class="field">
+      <label>备注</label>
+      <textarea id="c-input-note" placeholder="例如：村东头老张家"></textarea>
+    </div>
+    <div class="modal-btn-row">
+      <button class="btn btn-outline" onclick="closeModal('customer-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveCustomer()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 交易记账弹窗 ========== -->
+<div class="modal-mask" id="tx-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">记一笔账</div>
+    <div class="field">
+      <label>类型</label>
+      <select id="tx-type">
+        <option value="purchase">购买商品</option>
+        <option value="repair">维修服务</option>
+        <option value="other">其他</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>描述 *</label>
+      <textarea id="tx-desc" placeholder="买了什么 / 修了什么"></textarea>
+    </div>
+    <div class="field">
+      <label>总金额（元）*</label>
+      <input type="number" id="tx-amount" placeholder="0.00" step="0.1" min="0">
+    </div>
+    <div class="field">
+      <label>已付金额（元）</label>
+      <input type="number" id="tx-paid" placeholder="0" step="0.1" min="0" value="0">
+    </div>
+    <div class="field">
+      <label>操作人</label>
+      <input type="text" id="tx-operator" placeholder="谁经手的">
+    </div>
+    <div class="modal-btn-row">
+      <button class="btn btn-outline" onclick="closeModal('tx-modal')">取消</button>
+      <button class="btn btn-success" onclick="saveTransaction()">记账</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 还款弹窗 ========== -->
+<div class="modal-mask" id="pay-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">还款</div>
+    <div class="field">
+      <label>还款金额（元）*</label>
+      <input type="number" id="pay-amount" placeholder="0.00" step="0.1" min="0">
+    </div>
+    <div class="field">
+      <label>操作人</label>
+      <input type="text" id="pay-operator" placeholder="谁收的钱">
+    </div>
+    <div class="modal-btn-row">
+      <button class="btn btn-outline" onclick="closeModal('pay-modal')">取消</button>
+      <button class="btn btn-success" onclick="savePayment()">确认还款</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 设置页 ========== -->
+<div id="page-settings" class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">设置</div>
+      <div class="page-subtitle">系统管理</div>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h3>账号信息</h3>
+    <div class="settings-row">
+      <span class="label">当前账号</span>
+      <span class="value" id="current-user">—</span>
+    </div>
+    <div class="settings-row">
+      <span class="label">修改密码</span>
+      <button class="btn btn-outline btn-sm" onclick="openChangePass()">修改</button>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h3>数据管理</h3>
+    <div class="settings-row">
+      <span class="label">导出商品数据</span>
+      <button class="btn btn-outline btn-sm" onclick="exportProducts()">导出</button>
+    </div>
+    <div class="settings-row">
+      <span class="label">导入商品数据</span>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-file').click()">导入</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importProducts(event)">
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:40px">
+    <button class="btn btn-danger" onclick="doLogout()">退出登录</button>
+  </div>
+</div>
+
+<!-- 修改密码弹窗 -->
+<div class="modal-mask" id="pass-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">修改密码</div>
+    <div class="field">
+      <label>原密码</label>
+      <input type="password" id="old-pass" placeholder="请输入原密码">
+    </div>
+    <div class="field">
+      <label>新密码</label>
+      <input type="password" id="new-pass" placeholder="请输入新密码">
+    </div>
+    <div class="field">
+      <label>确认新密码</label>
+      <input type="password" id="confirm-pass" placeholder="再次输入新密码">
+    </div>
+    <div class="modal-btn-row">
+      <button class="btn btn-outline" onclick="closeModal('pass-modal')">取消</button>
+      <button class="btn btn-primary" onclick="changePassword()">确认修改</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- end app-main -->
+
+<script>
+// ========== Supabase ==========
+const SUPABASE_URL = 'https://lckkizqunjaipkirhndz.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxja2tpenF1bmphaXBraXJobmR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMDQ3NTksImV4cCI6MjA5OTc4MDc1OX0.biPPYZmgaVCKASc_oxzY9Au-GwZ5PVfj0vvmc-_Vevs';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ========== 全局状态 ==========
+let products = [];
+let orders = [];
+let customers = [];
+let transactions = [];
+let currentOrder = [];
+let editingId = null;
+let editingCustomerId = null;
+let currentImgBase64 = null;
+let activeCatFilter = '全部';
+let activeCashierCatFilter = '全部';
+let currentCustomerId = null;
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// ========== 导航 ==========
+function switchTab(tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+  document.querySelector(`.nav-item[data-tab="${tab}"]`).classList.add('active');
+  if (tab === 'products') renderProducts();
+  if (tab === 'cashier') renderCashier();
+  if (tab === 'history') renderHistory();
+  if (tab === 'customers') { showCustomerList(); renderCustomers(); }
+}
+
+// ========== 图片处理 ==========
+function previewImg(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const maxSize = 400;
+      let w = img.width, h = img.height;
+      if (w > maxSize || h > maxSize) {
+        if (w > h) { h = h * maxSize / w; w = maxSize; }
+        else { w = w * maxSize / h; h = maxSize; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      currentImgBase64 = canvas.toDataURL('image/jpeg', 0.7);
+      document.getElementById('img-preview').src = currentImgBase64;
+      document.getElementById('img-preview').style.display = 'block';
+      document.getElementById('upload-hint').style.display = 'none';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ========== Supabase 数据操作 ==========
+
+// -- 商品 --
+async function loadProducts() {
+  const { data, error } = await sb.from('products').select('*').order('created_at', { ascending: false });
+  if (error) { console.error('loadProducts:', error); showToast('加载商品失败'); return; }
+  products = data || [];
+}
+
+async function dbSaveProduct(p) {
+  const { error } = await sb.from('products').upsert(p);
+  if (error) { console.error('dbSaveProduct:', error); showToast('保存失败'); return false; }
+  return true;
+}
+
+async function dbDeleteProduct(id) {
+  const { error } = await sb.from('products').delete().eq('id', id);
+  if (error) { console.error('dbDeleteProduct:', error); showToast('删除失败'); return false; }
+  return true;
+}
+
+// -- 订单 --
+async function loadOrders() {
+  const { data, error } = await sb.from('orders').select('*').order('created_at', { ascending: false });
+  if (error) { console.error('loadOrders:', error); showToast('加载订单失败'); return; }
+  orders = data || [];
+}
+
+async function dbSaveOrder(o) {
+  const { error } = await sb.from('orders').insert(o);
+  if (error) { console.error('dbSaveOrder:', error); showToast('保存订单失败'); return false; }
+  return true;
+}
+
+async function dbDeleteOrder(id) {
+  const { error } = await sb.from('orders').delete().eq('id', id);
+  if (error) { console.error('dbDeleteOrder:', error); showToast('删除失败'); return false; }
+  return true;
+}
+
+// -- 客户 --
+async function loadCustomers() {
+  const { data, error } = await sb.from('customers').select('*').order('created_at', { ascending: false });
+  if (error) { console.error('loadCustomers:', error); showToast('加载客户失败'); return; }
+  customers = data || [];
+}
+
+async function dbSaveCustomer(c) {
+  const { error } = await sb.from('customers').upsert(c);
+  if (error) { console.error('dbSaveCustomer:', error); showToast('保存失败'); return false; }
+  return true;
+}
+
+async function dbDeleteCustomer(id) {
+  const { error } = await sb.from('customers').delete().eq('id', id);
+  if (error) { console.error('dbDeleteCustomer:', error); showToast('删除失败'); return false; }
+  return true;
+}
+
+// -- 交易记录 --
+async function loadTransactions(customerId) {
+  const { data, error } = await sb.from('customer_transactions').select('*').eq('customer_id', customerId).order('created_at', { ascending: false });
+  if (error) { console.error('loadTransactions:', error); showToast('加载记录失败'); return; }
+  transactions = data || [];
+}
+
+async function dbSaveTransaction(t) {
+  const { error } = await sb.from('customer_transactions').insert(t);
+  if (error) { console.error('dbSaveTransaction:', error); showToast('保存失败'); return false; }
+  return true;
+}
+
+async function dbDeleteTransaction(id) {
+  const { error } = await sb.from('customer_transactions').delete().eq('id', id);
+  if (error) { console.error('dbDeleteTransaction:', error); showToast('删除失败'); return false; }
+  return true;
+}
+
+// ========== 分类 ==========
+function getCategories() {
+  const cats = new Set(products.map(p => p.category).filter(Boolean));
+  return ['全部', ...Array.from(cats).sort()];
+}
+
+function renderCatFilters() {
+  const cats = getCategories();
+  const render = (containerId, activeVar, clickFn) => {
+    const el = document.getElementById(containerId);
+    el.innerHTML = cats.map(c =>
+      `<span class="cat-chip ${c === (activeVar === 'activeCatFilter' ? activeCatFilter : activeCashierCatFilter) ? 'active' : ''}" onclick="${activeVar}='${c}';${clickFn}()">${c}</span>`
+    ).join('');
+  };
+  render('cat-filter', 'activeCatFilter', 'renderProducts');
+  render('cashier-cat-filter', 'activeCashierCatFilter', 'renderCashier');
+  const dl = document.getElementById('cat-list');
+  dl.innerHTML = Array.from(cats).filter(c => c !== '全部').map(c => `<option value="${c}">`).join('');
+}
+
+// ========== 商品管理 ==========
+function openAddProduct() {
+  editingId = null;
+  currentImgBase64 = null;
+  document.getElementById('modal-title').textContent = '添加商品';
+  document.getElementById('input-name').value = '';
+  document.getElementById('input-price').value = '';
+  document.getElementById('input-category').value = '';
+  document.getElementById('img-preview').style.display = 'none';
+  document.getElementById('upload-hint').style.display = 'flex';
+  document.getElementById('img-input').value = '';
+  document.getElementById('product-modal').classList.add('show');
+}
+
+function openEditProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  editingId = id;
+  currentImgBase64 = p.image;
+  document.getElementById('modal-title').textContent = '编辑商品';
+  document.getElementById('input-name').value = p.name;
+  document.getElementById('input-price').value = p.price;
+  document.getElementById('input-category').value = p.category || '';
+  if (p.image) {
+    document.getElementById('img-preview').src = p.image;
+    document.getElementById('img-preview').style.display = 'block';
+    document.getElementById('upload-hint').style.display = 'none';
+  } else {
+    document.getElementById('img-preview').style.display = 'none';
+    document.getElementById('upload-hint').style.display = 'flex';
+  }
+  document.getElementById('img-input').value = '';
+  document.getElementById('product-modal').classList.add('show');
+}
+
+async function saveProduct() {
+  const name = document.getElementById('input-name').value.trim();
+  const price = parseFloat(document.getElementById('input-price').value);
+  const category = document.getElementById('input-category').value.trim();
+  if (!name) return showToast('请输入商品名称');
+  if (isNaN(price) || price < 0) return showToast('请输入有效价格');
+
+  if (editingId) {
+    const p = products.find(x => x.id === editingId);
+    const update = { id: editingId, name, price, category };
+    if (currentImgBase64) update.image = currentImgBase64;
+    else update.image = p.image;
+    const ok = await dbSaveProduct(update);
+    if (ok) showToast('商品已更新');
+  } else {
+    const p = { id: genId(), name, price, category, image: currentImgBase64 || null };
+    const ok = await dbSaveProduct(p);
+    if (ok) showToast('商品已添加');
+  }
+  closeModal('product-modal');
+  await loadProducts();
+  renderProducts();
+}
+
+async function deleteProduct(id) {
+  if (!confirm('确定删除此商品？')) return;
+  const ok = await dbDeleteProduct(id);
+  if (ok) {
+    await loadProducts();
+    renderProducts();
+    showToast('已删除');
+  }
+}
+
+function renderProducts() {
+  const keyword = document.getElementById('product-search').value.trim().toLowerCase();
+  let list = products;
+  if (keyword) list = list.filter(p => p.name.toLowerCase().includes(keyword));
+  if (activeCatFilter !== '全部') list = list.filter(p => p.category === activeCatFilter);
+  document.getElementById('product-count').textContent = `共 ${products.length} 件商品`;
+
+  const grid = document.getElementById('product-grid');
+  const empty = document.getElementById('product-empty');
+  if (list.length === 0) { grid.innerHTML = ''; empty.style.display = 'flex'; return; }
+  empty.style.display = 'none';
+
+  grid.innerHTML = list.map(p => `
+    <div class="product-card">
+      <div class="card-float-actions">
+        <button class="btn-float-edit" onclick="event.stopPropagation();openEditProduct('${p.id}')">
+          <svg viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        </button>
+        <button class="btn-float-del" onclick="event.stopPropagation();deleteProduct('${p.id}')">
+          <svg viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </button>
+      </div>
+      <div class="card-img-wrap">${p.image ? `<img src="${p.image}" alt="${p.name}">` : `<div class="placeholder-icon">&#128230;</div>`}</div>
+      <div class="card-body">
+        <div class="card-name" title="${p.name}">${p.name}</div>
+        <div class="card-price">${p.price.toFixed(1)}</div>
+        ${p.category ? `<span class="card-category">${p.category}</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+  renderCatFilters();
+}
+
+// ========== 收银台 ==========
+function renderCashier() {
+  const keyword = document.getElementById('cashier-search').value.trim().toLowerCase();
+  let list = products;
+  if (keyword) list = list.filter(p => p.name.toLowerCase().includes(keyword));
+  if (activeCashierCatFilter !== '全部') list = list.filter(p => p.category === activeCashierCatFilter);
+
+  const grid = document.getElementById('cashier-grid');
+  const empty = document.getElementById('cashier-empty');
+  if (list.length === 0) { grid.innerHTML = ''; empty.style.display = 'flex'; return; }
+  empty.style.display = 'none';
+
+  grid.innerHTML = list.map(p => {
+    const inOrder = currentOrder.some(o => o.productId === p.id);
+    return `
+      <div class="product-card cashier-card ${inOrder ? 'in-order' : ''}" onclick="addToOrder('${p.id}')">
+        <div class="add-badge">+</div>
+        <div class="card-img-wrap">${p.image ? `<img src="${p.image}" alt="${p.name}">` : `<div class="placeholder-icon">&#128230;</div>`}</div>
+        <div class="card-body">
+          <div class="card-name" title="${p.name}">${p.name}</div>
+          <div class="card-price">${p.price.toFixed(1)}</div>
+          ${p.category ? `<span class="card-category">${p.category}</span>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+  renderCatFilters();
+}
+
+function addToOrder(productId) {
+  const existing = currentOrder.find(o => o.productId === productId);
+  if (existing) existing.qty++;
+  else currentOrder.push({ productId, qty: 1 });
+  renderOrder();
+  renderCashier();
+}
+
+function changeQty(productId, delta) {
+  const item = currentOrder.find(o => o.productId === productId);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) currentOrder = currentOrder.filter(o => o.productId !== productId);
+  renderOrder();
+  renderCashier();
+}
+
+function removeOrderItem(productId) {
+  currentOrder = currentOrder.filter(o => o.productId !== productId);
+  renderOrder();
+  renderCashier();
+}
+
+function clearOrder() {
+  if (currentOrder.length === 0) return;
+  if (!confirm('确定清空当前订单？')) return;
+  currentOrder = [];
+  renderOrder();
+  renderCashier();
+}
+
+function renderOrder() {
+  const panel = document.getElementById('order-panel');
+  const container = document.getElementById('order-items');
+  const totalEl = document.getElementById('order-total');
+  const countEl = document.getElementById('order-count');
+  if (currentOrder.length === 0) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+
+  let total = 0, count = 0;
+  container.innerHTML = currentOrder.map(o => {
+    const p = products.find(x => x.id === o.productId);
+    if (!p) return '';
+    const subtotal = p.price * o.qty;
+    total += subtotal; count += o.qty;
+    return `
+      <div class="order-line">
+        <div class="order-line-img" style="background:#f1f5f9;display:flex;align-items:center;justify-content:center;border-radius:10px;">
+          ${p.image ? `<img src="${p.image}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;">` : `<span style="font-size:20px;opacity:.4">&#128230;</span>`}
+        </div>
+        <div class="order-line-info">
+          <div class="order-line-name">${p.name}</div>
+          <div class="order-line-price">&yen;${p.price.toFixed(1)} / 件</div>
+        </div>
+        <div class="qty-pill">
+          <button onclick="changeQty('${o.productId}', -1)">&minus;</button>
+          <span class="qty-val">${o.qty}</span>
+          <button onclick="changeQty('${o.productId}', 1)">+</button>
+        </div>
+        <div class="order-line-subtotal">&yen;${subtotal.toFixed(1)}</div>
+        <button class="order-line-del" onclick="removeOrderItem('${o.productId}')">
+          <svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    `;
+  }).join('');
+  totalEl.textContent = total.toFixed(1);
+  countEl.textContent = count + ' 件';
+}
+
+async function completeOrder() {
+  if (currentOrder.length === 0) return;
+  let total = 0;
+  const items = currentOrder.map(o => {
+    const p = products.find(x => x.id === o.productId);
+    const subtotal = p.price * o.qty;
+    total += subtotal;
+    return { productId: o.productId, name: p.name, price: p.price, qty: o.qty, image: p.image };
+  });
+
+  const order = {
+    id: genId(),
+    date: new Date().toISOString(),
+    items,
+    total
+  };
+  const ok = await dbSaveOrder(order);
+  if (ok) {
+    orders.unshift(order);
+    currentOrder = [];
+    renderOrder();
+    renderCashier();
+    showToast('订单完成  ¥' + total.toFixed(1));
+  }
+}
+
+// ========== 历史订单 ==========
+async function renderHistory() {
+  const dateFilter = document.getElementById('history-date').value;
+  let list = orders;
+  if (dateFilter) list = list.filter(o => o.date.slice(0, 10) === dateFilter);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const thisMonth = today.slice(0, 7);
+  const todayTotal = orders.filter(o => o.date.slice(0, 10) === today).reduce((s, o) => s + o.total, 0);
+  const monthTotal = orders.filter(o => o.date.slice(0, 7) === thisMonth).reduce((s, o) => s + o.total, 0);
+
+  document.getElementById('history-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-icon">&#128203;</div><div class="stat-value">${orders.length}</div><div class="stat-label">总订单</div></div>
+    <div class="stat-card"><div class="stat-icon">&#128176;</div><div class="stat-value">&yen;${todayTotal.toFixed(0)}</div><div class="stat-label">今日销售</div></div>
+    <div class="stat-card"><div class="stat-icon">&#128200;</div><div class="stat-value">&yen;${monthTotal.toFixed(0)}</div><div class="stat-label">本月销售</div></div>
+  `;
+
+  const container = document.getElementById('history-list');
+  const empty = document.getElementById('history-empty');
+  if (list.length === 0) { container.innerHTML = ''; empty.style.display = 'flex'; return; }
+  empty.style.display = 'none';
+
+  container.innerHTML = list.map(o => {
+    const d = new Date(o.date);
+    const dateStr = d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    const itemNames = o.items.map(i => i.name + ' x' + i.qty).join('、');
+    return `
+      <div class="history-card" onclick="this.classList.toggle('expanded')">
+        <div class="history-card-head">
+          <span class="history-card-date">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            ${dateStr}
+          </span>
+          <div style="display:flex;align-items:center">
+            <span class="history-card-total">${o.total.toFixed(1)}</span>
+            <button class="history-card-del" onclick="event.stopPropagation();deleteOrder('${o.id}')">删除</button>
+          </div>
+        </div>
+        <div class="history-card-summary">${itemNames}</div>
+        <div class="history-card-detail">
+          ${o.items.map(i => `
+            <div class="detail-row">
+              <span class="detail-row-name">${i.name}</span>
+              <span class="detail-row-right">
+                <span class="detail-row-qty">x${i.qty}</span>
+                <span class="detail-row-price">&yen;${(i.price * i.qty).toFixed(1)}</span>
+              </span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function deleteOrder(id) {
+  if (!confirm('确定删除此订单？')) return;
+  const ok = await dbDeleteOrder(id);
+  if (ok) {
+    orders = orders.filter(o => o.id !== id);
+    renderHistory();
+    showToast('订单已删除');
+  }
+}
+
+// ========== 客户管理 ==========
+function showCustomerList() {
+  document.getElementById('customer-list-view').style.display = 'block';
+  document.getElementById('customer-detail-view').classList.remove('active');
+  currentCustomerId = null;
+}
+
+function showCustomerDetail(id) {
+  currentCustomerId = id;
+  document.getElementById('customer-list-view').style.display = 'none';
+  document.getElementById('customer-detail-view').classList.add('active');
+  renderCustomerDetail();
+}
+
+function openAddCustomer() {
+  editingCustomerId = null;
+  document.getElementById('customer-modal-title').textContent = '添加客户';
+  document.getElementById('c-input-name').value = '';
+  document.getElementById('c-input-phone').value = '';
+  document.getElementById('c-input-address').value = '';
+  document.getElementById('c-input-note').value = '';
+  document.getElementById('customer-modal').classList.add('show');
+}
+
+function openEditCustomer(id) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  editingCustomerId = id;
+  document.getElementById('customer-modal-title').textContent = '编辑客户';
+  document.getElementById('c-input-name').value = c.name;
+  document.getElementById('c-input-phone').value = c.phone || '';
+  document.getElementById('c-input-address').value = c.address || '';
+  document.getElementById('c-input-note').value = c.note || '';
+  document.getElementById('customer-modal').classList.add('show');
+}
+
+async function saveCustomer() {
+  const name = document.getElementById('c-input-name').value.trim();
+  if (!name) return showToast('请输入客户姓名');
+  const phone = document.getElementById('c-input-phone').value.trim();
+  const address = document.getElementById('c-input-address').value.trim();
+  const note = document.getElementById('c-input-note').value.trim();
+
+  if (editingCustomerId) {
+    const ok = await dbSaveCustomer({ id: editingCustomerId, name, phone, address, note });
+    if (ok) showToast('客户已更新');
+  } else {
+    const ok = await dbSaveCustomer({ id: genId(), name, phone, address, note });
+    if (ok) showToast('客户已添加');
+  }
+  closeModal('customer-modal');
+  await loadCustomers();
+  renderCustomers();
+}
+
+async function deleteCustomer(id) {
+  const c = customers.find(x => x.id === id);
+  if (!confirm(`确定删除客户「${c ? c.name : ''}」？所有交易记录也会被删除。`)) return;
+  const ok = await dbDeleteCustomer(id);
+  if (ok) {
+    await loadCustomers();
+    renderCustomers();
+    showToast('已删除');
+  }
+}
+
+function getCustomerDebt(customerId) {
+  // 从已加载的 transactions 计算，或者用简单方法
+  // 这里我们用一个缓存的方式
+  return customerDebtCache[customerId] || 0;
+}
+
+let customerDebtCache = {};
+
+async function loadAllCustomerDebts() {
+  const { data, error } = await sb.from('customer_transactions').select('customer_id, amount, paid');
+  if (error) { console.error('loadAllCustomerDebts:', error); return; }
+  customerDebtCache = {};
+  (data || []).forEach(t => {
+    const cid = t.customer_id;
+    if (!customerDebtCache[cid]) customerDebtCache[cid] = 0;
+    customerDebtCache[cid] += (t.amount - t.paid);
+  });
+}
+
+async function renderCustomers() {
+  await loadAllCustomerDebts();
+  const keyword = document.getElementById('customer-search').value.trim().toLowerCase();
+  let list = customers;
+  if (keyword) list = list.filter(c => c.name.toLowerCase().includes(keyword) || (c.phone || '').includes(keyword));
+
+  document.getElementById('customer-count').textContent = `共 ${customers.length} 位客户`;
+
+  const grid = document.getElementById('customer-grid');
+  const empty = document.getElementById('customer-empty');
+  if (list.length === 0) { grid.innerHTML = ''; empty.style.display = 'flex'; return; }
+  empty.style.display = 'none';
+
+  grid.innerHTML = list.map(c => {
+    const debt = getCustomerDebt(c.id);
+    const debtClass = debt > 0 ? 'positive' : 'zero';
+    const debtText = debt > 0 ? `¥${debt.toFixed(1)}` : '无欠款';
+    return `
+      <div class="customer-card" onclick="showCustomerDetail('${c.id}')">
+        <div class="c-actions">
+          <button class="c-edit" onclick="event.stopPropagation();openEditCustomer('${c.id}')" title="编辑">
+            <svg viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          </button>
+          <button class="c-del" onclick="event.stopPropagation();deleteCustomer('${c.id}')" title="删除">
+            <svg viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+        </div>
+        <div class="c-name">${c.name}</div>
+        <div class="c-phone">${c.phone || '—'}${c.address ? ' · ' + c.address : ''}</div>
+        <div class="c-debt ${debtClass}">${debtText}</div>
+        <div class="c-debt-label">${debt > 0 ? '待收欠款' : '账目已清'}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ========== 客户详情 ==========
+async function renderCustomerDetail() {
+  if (!currentCustomerId) return;
+  const c = customers.find(x => x.id === currentCustomerId);
+  if (!c) { showCustomerList(); return; }
+
+  document.getElementById('detail-name').textContent = c.name;
+  document.getElementById('detail-phone').textContent = [c.phone, c.address, c.note].filter(Boolean).join(' · ') || '—';
+
+  await loadTransactions(currentCustomerId);
+
+  const totalAmount = transactions.reduce((s, t) => s + t.amount, 0);
+  const totalPaid = transactions.reduce((s, t) => s + t.paid, 0);
+  const totalOwed = totalAmount - totalPaid;
+
+  document.getElementById('detail-stats').innerHTML = `
+    <div class="detail-stat"><div class="ds-val debt">¥${totalOwed.toFixed(1)}</div><div class="ds-label">待收欠款</div></div>
+    <div class="detail-stat"><div class="ds-val paid">¥${totalPaid.toFixed(1)}</div><div class="ds-label">已收金额</div></div>
+    <div class="detail-stat"><div class="ds-val count">${transactions.length}</div><div class="ds-label">交易笔数</div></div>
+  `;
+
+  const txList = document.getElementById('tx-list');
+  const txEmpty = document.getElementById('tx-empty');
+  if (transactions.length === 0) { txList.innerHTML = ''; txEmpty.style.display = 'flex'; return; }
+  txEmpty.style.display = 'none';
+
+  const typeLabels = { purchase: '购买', repair: '维修', other: '其他', payment: '还款' };
+  txList.innerHTML = transactions.map(t => {
+    const d = new Date(t.created_at);
+    const dateStr = d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    const owed = t.amount - t.paid;
+    const typeClass = t.type === 'payment' ? 'payment' : (t.type === 'repair' ? 'repair' : 'purchase');
+    return `
+      <div class="tx-card">
+        <button class="tx-del" onclick="deleteTransaction('${t.id}')" title="删除">
+          <svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <div class="tx-top">
+          <span class="tx-type ${typeClass}">${typeLabels[t.type] || t.type}</span>
+          <span class="tx-date">${dateStr}</span>
+        </div>
+        <div class="tx-desc">${t.description || '—'}</div>
+        <div class="tx-amounts">
+          <span>金额: <span class="tx-amt">¥${t.amount.toFixed(1)}</span></span>
+          <span>已付: <span class="tx-paid">¥${t.paid.toFixed(1)}</span></span>
+          ${owed > 0 ? `<span>欠款: <span class="tx-owed">¥${owed.toFixed(1)}</span></span>` : ''}
+        </div>
+        ${t.operator ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px">经手人: ${t.operator}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+// ========== 交易操作 ==========
+function openAddTransaction() {
+  document.getElementById('tx-type').value = 'purchase';
+  document.getElementById('tx-desc').value = '';
+  document.getElementById('tx-amount').value = '';
+  document.getElementById('tx-paid').value = '0';
+  document.getElementById('tx-operator').value = '';
+  document.getElementById('tx-modal').classList.add('show');
+}
+
+async function saveTransaction() {
+  if (!currentCustomerId) return;
+  const type = document.getElementById('tx-type').value;
+  const desc = document.getElementById('tx-desc').value.trim();
+  const amount = parseFloat(document.getElementById('tx-amount').value);
+  const paid = parseFloat(document.getElementById('tx-paid').value) || 0;
+  const operator = document.getElementById('tx-operator').value.trim();
+
+  if (!desc) return showToast('请输入描述');
+  if (isNaN(amount) || amount <= 0) return showToast('请输入有效金额');
+  if (paid > amount) return showToast('已付不能超过总金额');
+
+  const tx = {
+    id: genId(),
+    customer_id: currentCustomerId,
+    type,
+    description: desc,
+    amount,
+    paid,
+    operator
+  };
+  const ok = await dbSaveTransaction(tx);
+  if (ok) {
+    closeModal('tx-modal');
+    await renderCustomerDetail();
+    showToast('已记账');
+  }
+}
+
+async function deleteTransaction(id) {
+  if (!confirm('确定删除此记录？')) return;
+  const ok = await dbDeleteTransaction(id);
+  if (ok) {
+    await renderCustomerDetail();
+    showToast('已删除');
+  }
+}
+
+// 还款
+function openPayModal() {
+  document.getElementById('pay-amount').value = '';
+  document.getElementById('pay-operator').value = '';
+  document.getElementById('pay-modal').classList.add('show');
+}
+
+async function savePayment() {
+  // 还款功能：创建一条负数交易记录
+  if (!currentCustomerId) return;
+  const amount = parseFloat(document.getElementById('pay-amount').value);
+  const operator = document.getElementById('pay-operator').value.trim();
+  if (isNaN(amount) || amount <= 0) return showToast('请输入有效金额');
+
+  const tx = {
+    id: genId(),
+    customer_id: currentCustomerId,
+    type: 'payment',
+    description: '还款',
+    amount: 0,
+    paid: amount,
+    operator
+  };
+  const ok = await dbSaveTransaction(tx);
+  if (ok) {
+    closeModal('pay-modal');
+    await renderCustomerDetail();
+    showToast(`已记录还款 ¥${amount.toFixed(1)}`);
+  }
+}
+
+// ========== 登录系统 ==========
+let currentUsername = '';
+
+async function checkLogin() {
+  const saved = localStorage.getItem('shop_login');
+  if (saved) {
+    try {
+      const { username, password } = JSON.parse(saved);
+      const { data, error } = await sb.from('credentials').select('*').eq('username', username).single();
+      if (!error && data && data.password === password) {
+        currentUsername = username;
+        showApp();
+        return;
+      }
+    } catch (e) {}
+    localStorage.removeItem('shop_login');
+  }
+  document.getElementById('login-page').style.display = 'flex';
+  document.getElementById('app-main').style.display = 'none';
+}
+
+async function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+
+  if (!user || !pass) { errEl.textContent = '请输入账号和密码'; return; }
+
+  const { data, error } = await sb.from('credentials').select('*').eq('username', user).single();
+  if (error || !data) { errEl.textContent = '账号不存在'; return; }
+  if (data.password !== pass) { errEl.textContent = '密码错误'; return; }
+
+  currentUsername = user;
+  localStorage.setItem('shop_login', JSON.stringify({ username: user, password: pass }));
+  showApp();
+}
+
+function showApp() {
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('app-main').style.display = 'block';
+  document.getElementById('current-user').textContent = currentUsername;
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  initApp();
+}
+
+function doLogout() {
+  if (!confirm('确定退出登录？')) return;
+  localStorage.removeItem('shop_login');
+  currentUsername = '';
+  document.getElementById('app-main').style.display = 'none';
+  document.getElementById('login-page').style.display = 'flex';
+}
+
+// 回车登录
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('login-user').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pass').focus(); });
+
+// ========== 修改密码 ==========
+function openChangePass() {
+  document.getElementById('old-pass').value = '';
+  document.getElementById('new-pass').value = '';
+  document.getElementById('confirm-pass').value = '';
+  document.getElementById('pass-modal').classList.add('show');
+}
+
+async function changePassword() {
+  const oldPass = document.getElementById('old-pass').value;
+  const newPass = document.getElementById('new-pass').value;
+  const confirmPass = document.getElementById('confirm-pass').value;
+
+  if (!oldPass || !newPass) return showToast('请填写完整');
+  if (newPass !== confirmPass) return showToast('两次密码不一致');
+  if (newPass.length < 4) return showToast('密码至少4位');
+
+  const { data, error } = await sb.from('credentials').select('*').eq('username', currentUsername).single();
+  if (error || !data) return showToast('查询失败');
+  if (data.password !== oldPass) return showToast('原密码错误');
+
+  const { error: upErr } = await sb.from('credentials').update({ password: newPass }).eq('username', currentUsername);
+  if (upErr) { showToast('修改失败'); return; }
+
+  localStorage.setItem('shop_login', JSON.stringify({ username: currentUsername, password: newPass }));
+  closeModal('pass-modal');
+  showToast('密码已修改');
+}
+
+// ========== 数据导入导出 ==========
+function exportProducts() {
+  const json = JSON.stringify(products, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '商品数据_' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  showToast('已导出');
+}
+
+async function importProducts(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  try {
+    const imported = JSON.parse(text);
+    if (!Array.isArray(imported)) { showToast('格式错误'); return; }
+    if (!confirm(`将导入 ${imported.length} 件商品，确定？`)) return;
+    for (const p of imported) {
+      if (p.id && p.name && p.price !== undefined) {
+        await dbSaveProduct(p);
+      }
+    }
+    await loadProducts();
+    renderProducts();
+    showToast(`已导入 ${imported.length} 件商品`);
+  } catch (err) {
+    showToast('文件格式错误');
+  }
+  e.target.value = '';
+}
+
+// ========== 初始化 ==========
+async function initApp() {
+  try {
+    await Promise.all([loadProducts(), loadOrders(), loadCustomers()]);
+    renderProducts();
+  } catch (e) {
+    console.error('Init error:', e);
+    showToast('初始化失败，请检查网络');
+  }
+}
+
+checkLogin();
+</script>
+</body>
+</html>
