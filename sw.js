@@ -26,7 +26,7 @@ self.addEventListener('fetch', e => {
   if (e.request.url.includes('supabase.co') ||
       e.request.url.includes('cdn.jsdelivr.net') ||
       e.request.url.includes('fonts.googleapis.com') ||
-      e.request.url.includes('groq.com')) {
+      e.request.url.includes('deepseek.com')) {
     e.respondWith(fetch(e.request));
     return;
   }

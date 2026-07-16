@@ -642,11 +642,11 @@ body{font-family:'Inter',-apple-system,"Microsoft YaHei","PingFang SC",sans-seri
   <div class="settings-section">
     <h3>AI 助手</h3>
     <div class="settings-row">
-      <span class="label">Groq API Key</span>
+      <span class="label">DeepSeek API Key</span>
       <button class="btn btn-outline btn-sm" onclick="setGroqKey()">设置</button>
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-top:4px">
-      免费申请：https://console.groq.com
+      申请地址：https://platform.deepseek.com
     </div>
   </div>
   <div class="settings-section">
@@ -1494,10 +1494,10 @@ document.getElementById('login-user').addEventListener('keydown', e => { if (e.k
 
 // ========== 修改密码 ==========
 function setGroqKey() {
-  const current = localStorage.getItem('groq_key') || '';
+  const current = localStorage.getItem('ai_key') || '';
   const key = prompt('请输入 Groq API Key：', current);
   if (key !== null) {
-    localStorage.setItem('groq_key', key.trim());
+    localStorage.setItem('ai_key', key.trim());
     showToast(key.trim() ? 'API Key 已保存' : 'API Key 已清除');
   }
 }
@@ -1575,7 +1575,8 @@ async function initApp() {
 }
 
 // ========== AI 助手 ==========
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const AI_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+const AI_MODEL = 'deepseek-chat';
 
 const AI_SYSTEM = `你是一个商铺记账系统的AI助手。用户会用中文告诉你要做什么，你需要解析指令并返回JSON格式的操作。
 
@@ -1676,7 +1677,7 @@ async function sendAI() {
   if (!text) return;
   input.value = '';
 
-  const apiKey = localStorage.getItem('groq_key') || '';
+  const apiKey = localStorage.getItem('ai_key') || '';
   if (!apiKey) {
     addAIMsg('请先在设置页填写 Groq API Key', 'bot', '提示');
     return;
@@ -1696,14 +1697,14 @@ async function sendAI() {
       debts: customerDebtCache
     };
 
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await fetch(AI_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + apiKey
       },
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model: AI_MODEL,
         messages: [
           { role: 'system', content: AI_SYSTEM + '\n\n当前系统数据：\n商品：' + JSON.stringify(ctx.products) + '\n客户：' + JSON.stringify(ctx.customers) + '\n欠款：' + JSON.stringify(ctx.debts) },
           { role: 'user', content: text }
