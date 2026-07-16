@@ -1577,6 +1577,7 @@ async function initApp() {
 // ========== AI 助手 ==========
 const AI_API_URL = 'https://api.deepseek.com/v1/chat/completions';
 const AI_MODEL = 'deepseek-chat';
+const _dk = atob('c2stYTcyNjc1NTNmNmEyNGY0NThmZGRmZTU1MTUxMTg0MTQ=');
 
 const AI_SYSTEM = `你是一个商铺记账系统的AI助手。用户会用中文告诉你要做什么，你需要解析指令并返回JSON格式的操作。
 
@@ -1677,9 +1678,9 @@ async function sendAI() {
   if (!text) return;
   input.value = '';
 
-  const apiKey = localStorage.getItem('ai_key') || '';
+  const apiKey = localStorage.getItem('ai_key') || _dk;
   if (!apiKey) {
-    addAIMsg('请先在设置页填写 Groq API Key', 'bot', '提示');
+    addAIMsg('AI 暂不可用', 'bot', '提示');
     return;
   }
 
